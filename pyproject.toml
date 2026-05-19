@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xmrs-xbosm"
+version = "0.1.0"
+description = "Collector, XBoSM generator, and XMRS simulator tooling"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+ "PyYAML>=6.0",
+ "numpy>=1.24",
+ "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+]
+
+[project.scripts]
+xmrs-xbosm = "xmrs_xbosm.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

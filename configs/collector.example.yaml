@@ -1,0 +1,5 @@
+# Collector: normalize stub or JSON input into JSONL events.
+source_name: collector
+output_jsonl: data/processed/collected_events.jsonl
+# Optional: path to JSON file (object or list of objects). Omit for built-in stub rows.
+# stub_input: data/sample/stub_metrics.json

@@ -1,0 +1,54 @@
+{
+  "steps": 300,
+  "seed": 42,
+  "start_ledger_index": 100001,
+  "initial_regime": "NORMAL",
+  "tx_count_min": 0,
+
+  "interval_distribution": {
+    "type": "lognormal",
+    "p50": 3.9,
+    "p95": 5.8
+  },
+
+  "tx_distribution": {
+    "type": "lognormal",
+    "p50": 90,
+    "p75": 130,
+    "p95": 220,
+    "p99": 380
+  },
+
+  "regimes": {
+    "NORMAL": {
+      "tx_multiplier": 1.0,
+      "duration_mean": 50
+    },
+    "STRESSED": {
+      "tx_multiplier": 1.5,
+      "duration_mean": 20
+    },
+    "BURST": {
+      "tx_multiplier": 2.5,
+      "duration_mean": 5
+    }
+  },
+
+  "markov_transition": {
+    "NORMAL": {
+      "NORMAL": 0.85,
+      "STRESSED": 0.12,
+      "BURST": 0.03
+    },
+    "STRESSED": {
+      "NORMAL": 0.5,
+      "STRESSED": 0.3,
+      "BURST": 0.2
+    },
+    "BURST": {
+      "NORMAL": 0.6,
+      "STRESSED": 0.3,
+      "BURST": 0.1
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# XBoSM generator: summarize collected JSONL into a bundle JSON artifact.
+input_jsonl: data/processed/collected_events.jsonl
+output_bundle_json: outputs/reports/xbosm_bundle.json
+xbosm_version: "0.1.0"
+notes: "Starter scaffold — replace summaries with your real XBoSM schema."

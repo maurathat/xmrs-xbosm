@@ -1,0 +1,17 @@
+# XMRS network propagation (flood vs selective). Writes two JSONL events + optional CSV.
+source_name: xmrs-network-sim
+output_jsonl: data/processed/xmrs_network_metrics.jsonl
+network_metrics_csv: data/processed/xmrs_network_compare.csv
+
+network:
+  n_nodes: 200
+  edge_probability: 0.08
+  n_regions: 5
+  seed: 42
+  source: 0
+  selective_ks: [6, 8, 10]
+  message_size_bytes: 1200
+  intra_latency_mu: -2.0
+  intra_latency_sigma: 0.35
+  inter_latency_mu: 1.5
+  inter_latency_sigma: 0.45

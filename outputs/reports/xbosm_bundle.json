@@ -1,0 +1,17 @@
+{
+  "xbosm_version": "0.1.0",
+  "generated_at": "2026-04-13T20:37:35Z",
+  "source_events_path": "/Users/mauraclark/xmrs-xbosm/data/processed/collected_events.jsonl",
+  "event_count": 2,
+  "kinds": {
+    "stub_sample": 2
+  },
+  "artifacts": [
+    {
+      "name": "normalized_events",
+      "format": "jsonl",
+      "path": "/Users/mauraclark/xmrs-xbosm/data/processed/collected_events.jsonl"
+    }
+  ],
+  "notes": "Starter scaffold \u2014 replace summaries with your real XBoSM schema."
+}

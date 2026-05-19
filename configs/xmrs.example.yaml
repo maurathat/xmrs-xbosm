@@ -1,0 +1,7 @@
+# XMRS simulator: emit synthetic tick events (JSONL) for testing the pipeline.
+source_name: xmrs-simulator
+output_jsonl: data/processed/xmrs_simulated.jsonl
+scenario: starter
+steps: 5
+base_load: 0.35
+load_drift_per_step: 0.05

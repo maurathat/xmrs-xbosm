@@ -1,0 +1,62 @@
+{
+  "seed": 42,
+  "network": {
+    "n_nodes": 160,
+    "n_regions": 5,
+    "edge_probability": 0.1,
+    "approx_mean_degree": 15.9,
+    "intra_latency_mu": -2.0,
+    "intra_latency_sigma": 0.35,
+    "inter_latency_mu": 1.5,
+    "inter_latency_sigma": 0.45,
+    "send_spacing_base_s": 0.00015,
+    "send_spacing_load_scale_s": 0.009,
+    "tx_count_ref": 10.0,
+    "burst_tx_weight": 2.0,
+    "couple_workload_send_spacing": true,
+    "queueing_load_scale_s": 0.0035,
+    "queueing_fanout_exponent": 1.0
+  },
+  "workload": {
+    "steps": 200,
+    "start_ledger_index": 100001,
+    "initial_regime": "NORMAL",
+    "tx_count_min": 0,
+    "markov": {
+      "NORMAL": { "NORMAL": 0.88, "STRESSED": 0.1, "BURST": 0.02 },
+      "STRESSED": { "NORMAL": 0.2, "STRESSED": 0.6, "BURST": 0.2 },
+      "BURST": { "NORMAL": 0.45, "STRESSED": 0.3, "BURST": 0.25 }
+    },
+    "lognormal": {
+      "NORMAL": {
+        "tx_count": { "mu": 2.2, "sigma": 0.35 },
+        "interval_s": { "mu": 1.0, "sigma": 0.12 }
+      },
+      "STRESSED": {
+        "tx_count": { "mu": 3.0, "sigma": 0.45 },
+        "interval_s": { "mu": 1.15, "sigma": 0.18 }
+      },
+      "BURST": {
+        "tx_count": { "mu": 3.8, "sigma": 0.55 },
+        "interval_s": { "mu": 0.75, "sigma": 0.2 }
+      }
+    }
+  },
+  "policy": {
+    "source": 0,
+    "selective_ks": [6, 8, 10]
+  },
+  "message": {
+    "message_size_bytes": 1200
+  },
+  "outputs": {
+    "combined_csv": "outputs/simulation/run_combined.csv"
+  },
+  "demo_tweaks": {
+    "denser_graph": "Increase network.edge_probability and update approx_mean_degree (~ p*(n-1)); try p=0.14-0.18 for n=160.",
+    "more_regions": "Increase network.n_regions (e.g. 8) for more cross-region edges at the same p.",
+    "hotter_burst": "Raise workload.lognormal.BURST.tx_count.mu and workload.markov.*.BURST; renormalize each markov row to sum 1.0.",
+    "leaner_fanout": "Tighten policy.selective_ks (e.g. [2, 3]) to stress low fan-out.",
+    "bigger_messages": "Raise message.message_size_bytes (e.g. 4096) to stress bandwidth estimates."
+  }
+}

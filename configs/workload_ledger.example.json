@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "steps": 500,
+  "start_ledger_index": 100001,
+  "initial_regime": "NORMAL",
+  "tx_count_min": 0,
+  "output_csv": "data/processed/synthetic_ledger_workload.csv",
+  "markov": {
+    "NORMAL": { "NORMAL": 0.88, "STRESSED": 0.10, "BURST": 0.02 },
+    "STRESSED": { "NORMAL": 0.20, "STRESSED": 0.60, "BURST": 0.20 },
+    "BURST": { "NORMAL": 0.45, "STRESSED": 0.30, "BURST": 0.25 }
+  },
+  "lognormal": {
+    "NORMAL": {
+      "tx_count": { "mu": 2.2, "sigma": 0.35 },
+      "interval_s": { "mu": 1.0, "sigma": 0.12 }
+    },
+    "STRESSED": {
+      "tx_count": { "mu": 3.0, "sigma": 0.45 },
+      "interval_s": { "mu": 1.15, "sigma": 0.18 }
+    },
+    "BURST": {
+      "tx_count": { "mu": 3.8, "sigma": 0.55 },
+      "interval_s": { "mu": 0.75, "sigma": 0.2 }
+    }
+  }
+}

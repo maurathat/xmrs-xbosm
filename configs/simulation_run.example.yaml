@@ -1,0 +1,22 @@
+# Full pipeline: XBoSM workload (JSON) + XMRS network sim → one CSV
+seed: 42
+
+workload:
+  config_path: workload_ledger.example.json
+  overrides:
+    steps: 80
+
+network:
+  n_nodes: 120
+  edge_probability: 0.1
+  n_regions: 4
+  source: 0
+  selective_ks: [6, 8, 10]
+  message_size_bytes: 1200
+  intra_latency_mu: -2.0
+  intra_latency_sigma: 0.35
+  inter_latency_mu: 1.5
+  inter_latency_sigma: 0.45
+
+# Relative to repository root when not absolute
+output_csv: outputs/simulation/run_combined.csv

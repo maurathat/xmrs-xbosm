@@ -1,0 +1,11 @@
+# Dashboard & analysis
+streamlit
+pandas
+numpy
+matplotlib
+
+# Real-time ingestion (e.g. XRPL / relay feeds)
+websocket-client
+
+# Core package runtime (YAML configs)
+PyYAML>=6.0

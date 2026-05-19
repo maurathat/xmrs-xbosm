@@ -1,0 +1,4 @@
+[
+  {"metric": "cpu_util", "value": 0.31, "host": "edge-a"},
+  {"metric": "mem_util", "value": 0.58, "host": "edge-a"}
+]
