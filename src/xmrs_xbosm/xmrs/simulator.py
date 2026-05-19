@@ -191,7 +191,21 @@ def propagate_from_source(
                     + 2.0 * normalized_instability
                 )
 
-            targets = sorted(neighbors, key=adaptive_score)[:k]
+            latency_quota = max(1, int(k * 0.75))
+            weighted_quota = k - latency_quota
+
+            latency_targets = sorted(neighbors, key=lambda e: e[1])[:latency_quota]
+            selected = list(latency_targets)
+            selected_nodes = {edge[0] for edge in selected}
+
+            weighted_candidates = [
+                edge
+                for edge in sorted(neighbors, key=adaptive_score)
+                if edge[0] not in selected_nodes
+            ]
+
+            selected.extend(weighted_candidates[:weighted_quota])
+            targets = selected
 
         else:
             k = min(selective_k, len(neighbors))

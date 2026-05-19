@@ -1,2 +1,2 @@
 record_type,policy,t95_propagation_s,num_sends,estimated_bandwidth_bps,reachability,network_load_index,send_spacing_s,queueing_load_scale_s,queueing_fanout_exponent
-network,adaptive_weighted_k8,9.608992423889237,1135,830501.2036364017,0.8875,1.9211981566820278,0.017440783410138248,0.0035,1.0
+network,adaptive_weighted_k8,3.0559304929335185,1279,1967513.6423639029,1.0,1.9211981566820278,0.017440783410138248,0.0035,1.0
