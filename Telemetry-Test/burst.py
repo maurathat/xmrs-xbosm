@@ -28,7 +28,7 @@ import pandas as pd
 
 
 def score_bursts(df, window=20, spike_z=8.0, score_threshold=0.55,
-                 interval_weight=0.5, min_run=1, z_threshold=None):
+                 interval_weight=0.5, min_run=3, z_threshold=None):
     df = df.copy()
     # backward compat: z_threshold overrides spike_z if explicitly passed
     threshold = z_threshold if z_threshold is not None else spike_z
