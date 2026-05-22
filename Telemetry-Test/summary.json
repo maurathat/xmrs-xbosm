@@ -1,0 +1,90 @@
+{
+  "source": "REAL capture: xrpl_test_telemetry.csv",
+  "ledgers": 427,
+  "span_minutes": 44.8,
+  "total_tx": 39474,
+  "burst_ledgers": 0,
+  "burst_windows": [],
+  "graph": {
+    "nodes": 200,
+    "degree": 21,
+    "trials": 300
+  },
+  "suppression_models": {
+    "none": "no suppression (upper bound)",
+    "sender": "sender-suppressed (realistic)",
+    "aware": "peer-aware (optimistic floor)"
+  },
+  "headline_mode": "sender",
+  "stats_by_mode": {
+    "none": {
+      "flood": {
+        "reachability": 1.0,
+        "reach_min": 1.0,
+        "relays_per_msg": 5214.0
+      },
+      "selective_k6": {
+        "reachability": 0.9982666666666667,
+        "reach_min": 0.985,
+        "relays_per_msg": 1197.92
+      },
+      "selective_k8": {
+        "reachability": 0.9998666666666668,
+        "reach_min": 0.995,
+        "relays_per_msg": 1599.7866666666666
+      },
+      "selective_k10": {
+        "reachability": 1.0,
+        "reach_min": 1.0,
+        "relays_per_msg": 2000.0
+      }
+    },
+    "sender": {
+      "flood": {
+        "reachability": 1.0,
+        "reach_min": 1.0,
+        "relays_per_msg": 4494.453333333333
+      },
+      "selective_k6": {
+        "reachability": 0.9982666666666667,
+        "reach_min": 0.985,
+        "relays_per_msg": 1108.9666666666667
+      },
+      "selective_k8": {
+        "reachability": 0.9998666666666668,
+        "reach_min": 0.995,
+        "relays_per_msg": 1463.9833333333333
+      },
+      "selective_k10": {
+        "reachability": 1.0,
+        "reach_min": 1.0,
+        "relays_per_msg": 1791.2466666666667
+      }
+    },
+    "aware": {
+      "flood": {
+        "reachability": 1.0,
+        "reach_min": 1.0,
+        "relays_per_msg": 719.5466666666666
+      },
+      "selective_k6": {
+        "reachability": 0.9982666666666667,
+        "reach_min": 0.985,
+        "relays_per_msg": 380.06666666666666
+      },
+      "selective_k8": {
+        "reachability": 0.9998666666666668,
+        "reach_min": 0.995,
+        "relays_per_msg": 437.2133333333333
+      },
+      "selective_k10": {
+        "reachability": 1.0,
+        "reach_min": 1.0,
+        "relays_per_msg": 536.15
+      }
+    }
+  },
+  "recommendation": "selective_k8",
+  "reach_floor": 0.99,
+  "bytes_per_relay": 350
+}
