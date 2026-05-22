@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XBOSM — Selective Forwarding in XRPL Gossip Routing</title>
+<meta name="description" content="Live-telemetry simulation study: selective forwarding cuts XRPL gossip bandwidth ~67% at the rippled default peer degree while holding reachability above 99.5%.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#161412;
+    --paper:#f8f5ef;
+    --line:#d9d2c5;
+    --accent:#1a5e63;
+    --accent-2:#b4451f;
+    --muted:#6b6358;
+    --chip:#ece7dc;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{background:#e8e3d8;scroll-behavior:smooth;}
+  body{
+    font-family:'Newsreader',Georgia,serif;
+    color:var(--ink);line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:32px 16px;
+  }
+  .sheet{
+    max-width:820px;margin:0 auto;background:var(--paper);
+    padding:54px 60px 0;
+    box-shadow:0 1px 0 #fff inset, 0 18px 50px -24px rgba(0,0,0,.35);
+    position:relative;
+    background-image:radial-gradient(circle at 12% 8%, rgba(26,94,99,.04), transparent 40%);
+  }
+  /* ---- masthead ---- */
+  .top{display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:2.5px solid var(--ink);padding-bottom:14px;}
+  .brand{font-family:'Fraunces',serif;font-weight:900;font-size:46px;
+    letter-spacing:-.02em;line-height:.92;}
+  .brand small{display:block;font-weight:500;font-size:13.5px;letter-spacing:.02em;
+    color:var(--muted);font-family:'Newsreader',serif;margin-top:7px;max-width:380px;line-height:1.35;}
+  .meta{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;
+    color:var(--muted);letter-spacing:.04em;line-height:1.7;text-transform:uppercase;}
+  .meta b{color:var(--accent);font-weight:700;}
+  /* ---- lede ---- */
+  .lede{font-family:'Fraunces',serif;font-size:19px;font-weight:400;line-height:1.42;
+    margin:22px 0 26px;color:#2a2620;}
+  .lede em{font-style:italic;color:var(--accent);}
+  /* ---- headline band ---- */
+  .band{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:1px;background:var(--line);
+    border:1px solid var(--line);margin-bottom:8px;}
+  .cell{background:var(--paper);padding:16px 18px;}
+  .cell .k{font-family:'JetBrains Mono',monospace;font-size:9.5px;text-transform:uppercase;
+    letter-spacing:.09em;color:var(--muted);margin-bottom:7px;}
+  .cell .v{font-family:'Fraunces',serif;font-weight:900;font-size:34px;line-height:.95;
+    letter-spacing:-.02em;}
+  .cell .v small{font-size:15px;font-weight:600;color:var(--muted);}
+  .cell.hot .v{color:var(--accent-2);}
+  .cell .sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.3;}
+  .bandnote{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);
+    letter-spacing:.02em;margin-bottom:26px;}
+  /* ---- section headers ---- */
+  h2.kick{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.13em;color:var(--accent);
+    margin:0 0 11px;display:flex;align-items:center;gap:10px;}
+  h2.kick::after{content:"";flex:1;height:1px;background:var(--line);}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:24px;}
+  p.body{font-size:14.5px;margin-bottom:11px;}
+  p.body:last-child{margin-bottom:0;}
+  .body b{font-weight:600;}
+  /* ---- tables ---- */
+  table.data{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;margin-top:2px;}
+  table.data th{text-align:right;font-weight:700;color:var(--muted);text-transform:uppercase;
+    font-size:9.5px;letter-spacing:.06em;padding:0 0 7px;border-bottom:1.5px solid var(--ink);}
+  table.data th:first-child{text-align:left;}
+  table.data td{text-align:right;padding:6px 0;border-bottom:1px solid var(--line);color:#2a2620;}
+  table.data td:first-child{text-align:left;color:var(--muted);}
+  table.data tr.def td{color:var(--accent-2);font-weight:700;}
+  table.data tr.def td:first-child{color:var(--accent-2);}
+  .tcap{font-family:'Newsreader',serif;font-size:12px;color:var(--muted);
+    font-style:italic;margin-top:9px;line-height:1.4;}
+  /* ---- ask band (dark) ---- */
+  .ask{background:var(--ink);color:#f3efe6;margin:6px -60px 0;padding:26px 60px 30px;}
+  .ask h2.kick{color:#e0a87f;}
+  .ask h2.kick::after{background:rgba(255,255,255,.18);}
+  .ask ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:14px 30px;}
+  .ask li{font-size:14px;line-height:1.4;padding-left:20px;position:relative;color:#e9e4d8;}
+  .ask li::before{content:"→";position:absolute;left:0;color:#e0a87f;font-family:'JetBrains Mono',monospace;}
+  .ask li b{color:#fff;font-weight:600;}
+  .foot{display:flex;justify-content:space-between;margin-top:22px;
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(243,239,230,.55);
+    letter-spacing:.04em;border-top:1px solid rgba(255,255,255,.13);padding-top:14px;}
+  .foot b{color:rgba(243,239,230,.85);font-weight:500;}
+
+  /* ============ PAPER SECTION ============ */
+  .paper-jump{display:flex;justify-content:center;padding:30px 0 0;}
+  .paper-jump a{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.1em;color:var(--accent);text-decoration:none;
+    border:1.5px solid var(--accent);padding:11px 22px;border-radius:2px;
+    transition:background .18s,color .18s;}
+  .paper-jump a:hover{background:var(--accent);color:var(--paper);}
+  .paper-jump a span{color:var(--accent-2);}
+  .paper-jump a:hover span{color:#e0a87f;}
+
+  .paper{max-width:820px;margin:0 auto;background:var(--paper);
+    padding:56px 90px 64px;
+    box-shadow:0 18px 50px -24px rgba(0,0,0,.35);}
+  .paper .ptitle{font-family:'Fraunces',serif;font-weight:900;font-size:33px;
+    line-height:1.08;letter-spacing:-.015em;margin-bottom:14px;color:var(--ink);}
+  .paper .pmeta{font-family:'JetBrains Mono',monospace;font-size:10.5px;
+    color:var(--muted);letter-spacing:.03em;line-height:1.8;text-transform:uppercase;
+    border-bottom:1.5px solid var(--line);padding-bottom:20px;margin-bottom:8px;}
+  .paper .abstract{background:var(--chip);padding:22px 26px;margin:26px 0 8px;
+    border-left:3px solid var(--accent);}
+  .paper .abstract .alabel{font-family:'JetBrains Mono',monospace;font-size:9.5px;
+    font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);
+    margin-bottom:9px;}
+  .paper .abstract p{font-size:14px;line-height:1.6;color:#2a2620;}
+  .paper h3{font-family:'Fraunces',serif;font-weight:600;font-size:21px;
+    margin:38px 0 4px;color:var(--ink);letter-spacing:-.01em;
+    padding-top:8px;border-top:1px solid var(--line);}
+  .paper h3 .num{color:var(--accent);font-weight:900;margin-right:10px;}
+  .paper h4{font-family:'Fraunces',serif;font-weight:600;font-size:16px;
+    margin:22px 0 2px;color:#33302a;}
+  .paper p{font-size:15px;line-height:1.62;margin:11px 0;color:#26221c;}
+  .paper p b,.paper li b{font-weight:600;color:var(--ink);}
+  .paper em{font-style:italic;}
+  .paper ul,.paper ol{margin:12px 0 12px 4px;padding-left:22px;}
+  .paper li{font-size:15px;line-height:1.6;margin:7px 0;color:#26221c;}
+  .paper blockquote{margin:18px 0;padding:14px 20px;background:rgba(26,94,99,.05);
+    border-left:3px solid var(--accent);font-style:italic;font-size:14.5px;color:#2a2620;}
+  .paper .pending{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;
+    font-style:normal;color:var(--accent-2);background:rgba(180,69,31,.06);
+    border:1px dashed rgba(180,69,31,.4);border-radius:2px;padding:13px 16px;margin:16px 0;
+    letter-spacing:.02em;line-height:1.5;}
+  .paper .pending b{color:var(--accent-2);}
+  .paper code{font-family:'JetBrains Mono',monospace;font-size:12.5px;
+    background:var(--chip);padding:1px 5px;border-radius:2px;}
+  .paper pre{background:var(--ink);color:#e9e4d8;font-family:'JetBrains Mono',monospace;
+    font-size:12px;line-height:1.6;padding:18px 22px;border-radius:3px;margin:16px 0;
+    overflow-x:auto;}
+  .paper pre code{background:none;padding:0;color:inherit;font-size:12px;}
+  .paper .limit{font-weight:600;color:var(--accent-2);}
+  .paper figure{margin:22px 0;}
+  .paper figure img{width:100%;height:auto;display:block;
+    border:1px solid var(--line);border-radius:3px;background:var(--paper);}
+  .paper figure figcaption{font-family:'Newsreader',serif;font-size:12px;
+    color:var(--muted);font-style:italic;margin-top:9px;line-height:1.45;}
+  .paper figure figcaption b{font-style:normal;color:var(--accent);font-weight:600;}
+
+  .pagefoot{max-width:820px;margin:0 auto;text-align:center;padding:30px 0 8px;
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);
+    letter-spacing:.05em;}
+  .pagefoot a{color:var(--accent);text-decoration:none;}
+
+  @media print{
+    html,body{background:#fff;padding:0;}
+    .sheet,.paper{box-shadow:none;max-width:none;}
+    .paper-jump{display:none;}
+    .ask,.band,.cell{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+  @media(max-width:680px){
+    .sheet{padding:34px 24px 0;}
+    .band{grid-template-columns:1fr;}
+    .cols,.ask ul{grid-template-columns:1fr;gap:16px;}
+    .ask{margin:6px -24px 0;padding:22px 24px;}
+    .brand{font-size:36px;}
+    .paper{padding:38px 24px 46px;}
+    .paper .ptitle{font-size:25px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== ONE-PAGER HERO ==================== -->
+<div class="sheet">
+  <div class="top">
+    <div class="brand">XBOSM
+      <small>Burst-overlay simulation for XRPL gossip routing — does selective forwarding cut bandwidth without breaking message reach?</small>
+    </div>
+    <div class="meta">
+      Research brief<br>
+      XRPL Commons<br>
+      <b>May 2026</b>
+    </div>
+  </div>
+
+  <p class="lede">We tested a simple question against <em>live mainnet telemetry</em>: if XRPL nodes forwarded each transaction to a fixed handful of peers instead of flooding all of them, how much relay bandwidth is saved — and how much message reachability is lost?</p>
+
+  <div class="band">
+    <div class="cell hot">
+      <div class="k">Bandwidth reduction</div>
+      <div class="v">67<small>%</small></div>
+      <div class="sub">selective-k8 vs. flood, realistic gossip, at the rippled default of 21 peers</div>
+    </div>
+    <div class="cell">
+      <div class="k">Reachability held</div>
+      <div class="v">≥99.5<small>%</small></div>
+      <div class="sub">worst-case across 300 Monte-Carlo trials; 99.99% average</div>
+    </div>
+    <div class="cell">
+      <div class="k">Conservative floor</div>
+      <div class="v">39<small>%</small></div>
+      <div class="sub">if peers achieve aggressive duplicate suppression</div>
+    </div>
+  </div>
+  <p class="bandnote">// headline figure stated with its assumption — degree-21; saving scales 38%→84% across degrees 12→50</p>
+
+  <div class="cols">
+    <div>
+      <h2 class="kick">What we did</h2>
+      <p class="body">Captured 45 minutes of live XRPL ledger telemetry from public servers — <b>427 ledgers, 39,474 transactions</b>, mean 92 tx/ledger, peak 556. One row per closed ledger using each ledger's authoritative transaction count.</p>
+      <p class="body">Ran a Monte-Carlo gossip simulation on a 200-node peer graph, comparing flood against selective-<i>k</i> forwarding (each node relays to <i>k</i> random peers). Bandwidth is measured as relay events; reachability as the fraction of nodes that receive a message.</p>
+    </div>
+    <div>
+      <h2 class="kick">Why it's credible</h2>
+      <p class="body"><b>Every parameter is sourced, not assumed.</b> Peer degree is set to rippled's documented default soft-max of 21. The headline uses sender-suppressed gossip — the realistic model every protocol implements — not the flattering dedup-free upper bound.</p>
+      <p class="body">We report a <b>bracket, not a single number</b>: 67% under realistic suppression, 39% as a conservative floor. The result travels with its peer-degree assumption and a full sensitivity sweep.</p>
+    </div>
+  </div>
+
+  <h2 class="kick">Sensitivity — saving vs. peer degree</h2>
+  <table class="data">
+    <thead>
+      <tr><th>Peer degree</th><th>Flood relays</th><th>k8 relays</th><th>Bandwidth cut</th><th>k8 reach (min)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>12</td><td>2,209</td><td>1,362</td><td>38.3%</td><td>100.0%</td></tr>
+      <tr><td>16</td><td>3,261</td><td>1,422</td><td>56.4%</td><td>99.99%</td></tr>
+      <tr class="def"><td>21 — rippled default</td><td>4,494</td><td>1,464</td><td>67.4%</td><td>99.99%</td></tr>
+      <tr><td>30</td><td>6,254</td><td>1,504</td><td>76.0%</td><td>99.98%</td></tr>
+      <tr><td>50</td><td>9,643</td><td>1,542</td><td>84.0%</td><td>99.97%</td></tr>
+    </tbody>
+  </table>
+  <p class="tcap">Selective forwarding is self-limiting: k8's relay count stays near-flat (~1,360–1,540) as the graph densifies, while flood scales linearly. The denser the network, the larger the saving.</p>
+
+  <div class="ask">
+    <h2 class="kick">What we'd value from XRPL Commons</h2>
+    <ul>
+      <li><b>Ground-truth peer counts.</b> Our degree-21 anchor is the documented default — real distributions from operators would tighten the headline.</li>
+      <li><b>A longer, richer capture.</b> 45 min caught 5 single-ledger spikes and no sustained congestion episode; a multi-hour run would strengthen the detection claim.</li>
+      <li><b>Relay-layer reality-check.</b> Does rippled's transaction relay behave closer to our sender-suppressed model or the peer-aware floor?</li>
+      <li><b>Operators to test with.</b> Anyone running a node who'd compare simulated vs. observed relay load.</li>
+    </ul>
+    <div class="foot">
+      <span>XBOSM / XMRS — overlay routing research</span>
+      <span><b>mauraclark@proton.me</b></span>
+    </div>
+  </div>
+
+  <div class="paper-jump">
+    <a href="#paper">Read the full study <span>↓</span></a>
+  </div>
+  <div style="height:46px"></div>
+</div>
+
+<!-- ==================== FULL PAPER ==================== -->
+<article class="paper" id="paper">
+  <div class="ptitle">Selective Forwarding in XRPL Gossip Routing: A Live-Telemetry Simulation Study</div>
+  <div class="pmeta">
+    XBOSM / XMRS — Overlay Routing Research<br>
+    Working draft · May 2026 · mauraclark@proton.me
+  </div>
+
+  <div class="abstract">
+    <div class="alabel">Abstract</div>
+    <p>Public blockchain peer-to-peer networks propagate transactions by gossip flooding: each node relays every message to all of its peers. Flooding is robust but bandwidth-expensive, and its cost grows linearly with peer connectivity. We ask whether <em>selective forwarding</em> — relaying each message to a fixed handful of peers rather than all of them — can substantially reduce relay bandwidth on the XRP Ledger (XRPL) without meaningfully degrading message reachability. Using 45 minutes of live XRPL mainnet telemetry (427 closed ledgers, 39,474 transactions) to drive a Monte-Carlo gossip simulation over a 200-node peer graph, we find that forwarding to 8 random peers (selective-k8) reduces simulated relay bandwidth by approximately <b>67% relative to flooding at the rippled default peer degree of 21</b>, while retaining at least 99.5% reachability in the worst trial and 99.99% on average. The reduction is bracketed: approximately 39% under an aggressive peer-aware duplicate-suppression model, rising to 84% at higher peer degrees. The saving scales from 38% to 84% across peer degrees 12 to 50, with selective forwarding's relay count remaining nearly constant while flooding's grows linearly. We discuss the limits of these results — single short capture, idealized peer graph, simulated rather than instrumented relay behavior — and outline the validation that would convert them into a deployment claim.</p>
+  </div>
+
+  <h3><span class="num">1</span>Introduction</h3>
+  <p>The XRP Ledger, like most public blockchain networks, disseminates transactions through a gossip overlay. When a node receives a new transaction it has not seen before, it relays that transaction to its peers, who relay to theirs, until the message has saturated the network. This <em>flooding</em> discipline is simple and resilient: as long as the peer graph is connected, every node eventually receives every message, and the network tolerates node churn and adversarial behavior gracefully.</p>
+  <p>Flooding's cost is bandwidth. Each node transmits every message to every peer, so the total number of relay events per message scales with the number of nodes times their average peer degree. As a network grows — both in node count and in per-node connectivity — flooding bandwidth grows with it, and much of that bandwidth is spent on redundant transmissions to peers that have already received the message from someone else.</p>
+  <p>A natural question is whether nodes can forward more parsimoniously. If each node relays a new message to only <em>k</em> of its peers rather than all of them, total relay traffic falls. The risk is that some nodes are never reached — the network fragments, or some transactions fail to propagate. The engineering question is the trade-off: how much bandwidth does selective forwarding save, and how much reachability does it cost?</p>
+  <p>This paper measures that trade-off for XRPL specifically, using live mainnet transaction telemetry to ground the traffic model and the documented rippled peer-degree default to ground the topology. Our contribution is not a new protocol — selective and probabilistic gossip are well studied in the distributed-systems literature — but a <em>quantified, sourced, reproducible</em> estimate of the trade-off under XRPL's actual operating parameters, reported with its assumption-dependence made explicit rather than hidden behind a single headline number.</p>
+
+  <h3><span class="num">2</span>Method</h3>
+  <h4>2.1 Telemetry capture</h4>
+  <p>We captured live XRPL ledger telemetry by subscribing to the public <code>ledger</code> stream via WebSocket (<code>wss://xrplcluster.com</code>, with automatic failover to <code>s1.ripple.com</code> and <code>s2.ripple.com</code>). For each closed ledger we recorded the ledger index, the authoritative on-ledger transaction count (<code>txn_count</code>), the ledger close time, and the inter-ledger interval derived from successive close times.</p>
+  <p>We use each ledger's authoritative <code>txn_count</code> rather than counting transactions pushed over the subscription stream. The latter undercounts, because a public server relays only a subset of transactions to any given subscriber; the closed-ledger header reports the true count. Inter-ledger intervals are derived from on-ledger close times rather than message arrival times, so they reflect consensus cadence rather than network jitter. (XRPL close times are quantized to whole seconds, a point we return to in §2.3.)</p>
+  <p>The capture spans <b>45 minutes: 427 closed ledgers, 39,474 transactions, mean 92.4 transactions per ledger, peak 556.</b> Two reconnections occurred during capture as public servers rotated connections; the collector resumed without data loss across the rotation.</p>
+  <figure>
+    <img src="figure1_telemetry.svg" alt="Transactions per closed ledger across the 45-minute capture, with five detected congestion spikes marked.">
+    <figcaption><b>Figure 1.</b> XRPL transactions per closed ledger across the 45-minute capture (427 ledgers, mean 92.4). Five single-ledger congestion spikes (peak tx 556, 470, 331, 183, 143) flagged by the spike track at z ≥ 8, marked in sienna. No sustained multi-ledger episode occurred.</figcaption>
+  </figure>
+
+  <h4>2.2 Gossip propagation model</h4>
+  <p>We model the XRPL peer overlay as an undirected random graph of 200 nodes, each connected to approximately <em>d</em> peers. For the headline result we set <em>d</em> = 21, the documented rippled default soft-maximum number of peers; §3.2 sweeps <em>d</em> across a wider range.</p>
+  <p>For each forwarding policy we run a Monte-Carlo simulation of single-message propagation. A message originates at a uniformly random node and propagates in synchronous rounds: each newly-informed node relays the message to a forwarding set of its peers. We compare <b>flood</b> (relay to all peers) against <b>selective-k</b> (relay to <em>k</em> uniformly-random peers, for k ∈ {6, 8, 10}). We measure two quantities per trial, averaged over 300 trials per policy: <b>reachability</b>, the fraction of nodes that receive the message; and <b>relays per message</b>, the total number of send events, used as the bandwidth proxy. We also report worst-case (minimum) reachability across trials.</p>
+
+  <h4>2.3 Duplicate suppression: a bracket, not a point estimate</h4>
+  <p>The bandwidth a policy actually consumes depends critically on how aggressively nodes suppress redundant transmissions. <em>Receive-side</em> suppression — a node forwards each message only once — is standard gossip and is assumed in all of our models. <em>Send-side</em> suppression — a node declining to spend bandwidth on a transmission it judges unnecessary — is what differs between real protocols, and it is the dominant lever on the bandwidth number. We therefore report three send-side models that bracket plausible reality:</p>
+  <ul>
+    <li><b>none</b> — every node forwards to its full policy set every time. The dedup-free <em>upper bound</em>, most flattering to selective forwarding's relative saving.</li>
+    <li><b>sender</b> — a node never relays back to the peer it received the message from, but cannot suppress transmissions to peers who received it from a third party. The <em>realistic</em> model, and our headline.</li>
+    <li><b>aware</b> — a node never relays to any peer already informed as of the current round. An <em>optimistic floor</em>, approximating mechanisms such as squelching; it yields the smallest relative saving, because under aggressive awareness even flooding approaches the minimal relay count.</li>
+  </ul>
+  <p>Reachability is identical across the three models by construction: suppression only ever skips a transmission to an <em>already-informed</em> peer, so it can never prevent a previously-uninformed node from being reached.</p>
+
+  <h4>2.4 Reproducibility</h4>
+  <p>All simulations use fixed random seeds (graph construction seed 0; propagation seed 1). The full harness — telemetry collector, burst scorer, gossip simulator, and test runner — is available from the authors. Every reported number can be regenerated from the captured telemetry CSV with a single command.</p>
+
+  <h3><span class="num">3</span>Results</h3>
+  <h4>3.1 Headline: selective-k8 at the rippled default degree</h4>
+  <p>At peer degree 21, forwarding to 8 random peers reduces relay bandwidth substantially while holding reachability:</p>
+  <table class="data">
+    <thead>
+      <tr><th>Policy</th><th>Reach (avg)</th><th>Reach (worst)</th><th>Relays — none</th><th>Relays — sender</th><th>Relays — aware</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>flood</td><td>100.00%</td><td>100.00%</td><td>5,214</td><td>4,494</td><td>720</td></tr>
+      <tr><td>selective-k6</td><td>99.83%</td><td>98.50%</td><td>1,198</td><td>1,109</td><td>380</td></tr>
+      <tr class="def"><td>selective-k8</td><td>99.99%</td><td>99.50%</td><td>1,600</td><td>1,464</td><td>437</td></tr>
+      <tr><td>selective-k10</td><td>100.00%</td><td>100.00%</td><td>2,000</td><td>1,791</td><td>536</td></tr>
+    </tbody>
+  </table>
+  <p class="tcap">Relays per message at peer degree 21, averaged over 300 trials, under the three send-side suppression models (§2.3). selective-k8 is the recommended policy: 4,494 → 1,464 relays under the realistic sender model is the 67.4% reduction; the aware model's 720 → 437 is the 39.2% floor.</p>
+  <p>The recommended policy is <b>selective-k8</b>: the most aggressive forwarding reduction that holds worst-case reachability at or above 99.5%. (selective-k6 saves more bandwidth but its worst-trial reachability drops to 98.5%, below our 99% operational floor.) Stated with its assumption:</p>
+  <blockquote>At the rippled default soft-maximum of 21 peers, selective-k8 forwarding reduces simulated relay bandwidth by approximately 67% under realistic sender-suppressed gossip (a conservative peer-aware floor of approximately 39%), while maintaining at least 99.5% reachability in the worst of 300 Monte-Carlo trials and 99.99% on average.</blockquote>
+
+  <h4>3.2 Sensitivity to peer degree</h4>
+  <p>The bandwidth saving depends strongly on peer degree, because flooding's cost scales with connectivity while selective forwarding's does not. We sweep degree from 12 to 50:</p>
+  <table class="data">
+    <thead>
+      <tr><th>Peer degree</th><th>Flood relays</th><th>k8 relays</th><th>Bandwidth cut (sender)</th><th>k8 reach (worst)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>12</td><td>2,209</td><td>1,362</td><td>38.3%</td><td>100.00%</td></tr>
+      <tr><td>16</td><td>3,261</td><td>1,422</td><td>56.4%</td><td>99.99%</td></tr>
+      <tr class="def"><td>21 — rippled default</td><td>4,494</td><td>1,464</td><td>67.4%</td><td>99.99%</td></tr>
+      <tr><td>30</td><td>6,254</td><td>1,504</td><td>76.0%</td><td>99.98%</td></tr>
+      <tr><td>50</td><td>9,643</td><td>1,542</td><td>84.0%</td><td>99.97%</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <img src="figure2_degree_sweep.svg" alt="Flood and selective-k8 relays per message versus peer degree; flood scales linearly while selective-k8 stays flat.">
+    <figcaption><b>Figure 2.</b> Relays per message versus peer degree, sender-suppressed model. Flooding (sienna) scales linearly with connectivity; selective-k8 (teal) stays nearly flat. The widening gap is the bandwidth saved — 67% at the rippled default of 21 peers. This divergence is the core argument: selective forwarding is self-limiting where flooding is not.</figcaption>
+  </figure>
+  <p>The structural finding is visible in the relay counts: <b>selective-k8's relay count stays nearly constant (~1,360–1,540) across the entire degree range, while flooding's grows linearly</b> (2,209 → 9,643). Selective forwarding is self-limiting by construction — each node relays to at most <em>k</em> peers regardless of how many it holds — so the denser the network, the larger the proportional saving. Reachability remains robust throughout, at or above 99.0% even at degree 50.</p>
+  <p>This degree-dependence is also the principal source of uncertainty in the headline number, and the reason we attach the assumption to every statement of it. The rippled default of 21 is a documented soft-maximum, not a measured typical value; real nodes may sit below their maximum, and hub nodes deliberately run far higher. A single uniform degree is a modeling simplification — real peer counts vary node to node — and ground-truth degree distributions from operators would be the single highest-value input to tightening this result.</p>
+
+  <h4>3.3 Burst detection</h4>
+  <p>As a secondary analysis, we scored each ledger for burst conditions using a two-track detector: a <em>spike</em> track flags any single ledger whose transaction count exceeds 8 standard deviations above its trailing 20-ledger baseline, and a <em>sustained</em> track flags runs of three or more consecutive moderately-elevated ledgers. The spike threshold was calibrated against the captured data: at 8 standard deviations the detector isolates genuine congestion events from ordinary variance, where a lower threshold admits merely-busy ledgers and a higher one discards real spikes.</p>
+  <p>The detector flags by <em>local</em> deviation rather than absolute count, which is the appropriate definition for burst detection: a transaction count that is unremarkable in absolute terms can be a genuine anomaly if its local neighborhood was much quieter. In this capture the detector identified <b>five discrete congestion spikes (peak transaction counts of 556, 470, 331, 183, and 143) and no sustained congestion episode</b> — every burst was a single-ledger event, consistent with the ~3–4 second ledger cadence resolving load within one close. The 331-transaction ledger registered the highest deviation (z = 24.1) despite not being the largest in absolute terms, because its local window was unusually quiet — a direct illustration of detection by local deviation rather than raw count.</p>
+
+  <h3><span class="num">4</span>Limitations</h3>
+  <p>We state these plainly, because the result's value rests on its honesty.</p>
+  <p><span class="limit">Single short capture.</span> Forty-five minutes of telemetry containing five single-ledger spikes and no sustained congestion episode is a thin empirical base for the burst-detection analysis specifically. It is adequate to drive the bandwidth model (which depends on transaction <em>volume</em>, not on burst structure), but a multi-hour capture spanning at least one sustained congestion episode would substantially strengthen any claim about the detector.</p>
+  <p><span class="limit">Idealized topology.</span> We model a uniform-degree random graph. Real XRPL connectivity is heterogeneous (hub-and-spoke elements, clustered operators, fixed-peer relationships) and the degree is a soft-maximum rather than a measured distribution. The bandwidth saving is highly sensitive to this assumption (§3.2), which is why we report the full sweep rather than a point estimate.</p>
+  <p><span class="limit">Simulated, not instrumented, relay behavior.</span> Our bandwidth figures come from a gossip simulation, not from instrumenting an actual rippled node's relay traffic. Whether real rippled transaction relay behaves closer to our sender-suppressed model or our peer-aware floor is an empirical question we cannot answer from telemetry alone; it requires either reading the relay implementation or measuring a live node. This is the gap between our 67% headline and 39% floor, and closing it is the most direct path to a deployment-grade number.</p>
+  <p><span class="limit">No consensus interaction.</span> We model transaction <em>propagation</em> in isolation. We do not model selective forwarding's interaction with XRPL consensus, validator message flow, or adversarial conditions. Any deployment claim would need to establish that bandwidth savings do not come at the cost of consensus safety or liveness — a question entirely outside this study's scope.</p>
+
+  <h3><span class="num">5</span>Future Work</h3>
+  <p>The limitations map directly onto next steps, in rough order of leverage:</p>
+  <ol>
+    <li><b>Ground-truth peer-degree distribution.</b> Real per-node peer counts from operators would replace the soft-maximum assumption and tighten the headline from a sourced default to a measured one.</li>
+    <li><b>Instrumented relay measurement.</b> Comparing simulated relay load against an actual rippled node's observed transmission counts would resolve the sender-vs-aware bracket into a single defensible figure.</li>
+    <li><b>Longer, richer telemetry.</b> A multi-hour capture catching sustained congestion would validate the burst detector's sustained track, which this capture left unexercised.</li>
+    <li><b>Heterogeneous topology.</b> Replacing the uniform-degree graph with a measured or realistically-clustered topology would test whether the saving survives real network structure.</li>
+    <li><b>Consensus-safety analysis.</b> Establishing that selective forwarding preserves propagation guarantees under adversarial and partition conditions — the precondition for any operational recommendation.</li>
+  </ol>
+
+  <h3><span class="num">6</span>Conclusion</h3>
+  <p>Selective forwarding offers a substantial, reachability-preserving bandwidth reduction for XRPL gossip under the network's documented operating parameters. At the rippled default peer degree of 21, forwarding to 8 random peers cuts simulated relay bandwidth by approximately 67% under a realistic suppression model — bounded by a 39% conservative floor and a higher ceiling at greater connectivity — while holding reachability at or above 99.5% in the worst case. The saving grows with peer density, because selective forwarding's cost is self-limiting where flooding's is not.</p>
+  <p>These are simulation results grounded in live telemetry and sourced parameters, not deployment measurements, and we have been explicit about the gap between the two. The result is best read as a quantified, reproducible case for taking selective forwarding seriously enough to instrument and measure on real infrastructure — and a precise statement of which measurements would settle the open questions.</p>
+
+  <h3><span class="num">A</span>Reproduction</h3>
+  <pre><code># headline result at the rippled default degree
+python3 run_test.py --csv xrpl_test_telemetry.csv --degree 21
+
+# full degree sensitivity sweep -> degree_sweep.csv
+python3 run_test.py --degree-sweep 12,16,21,30,50</code></pre>
+  <p><b>Parameters</b> (all sourced or calibrated, none assumed): peer degree 21 — rippled documented default soft-maximum; spike threshold z = 8 — calibrated on captured data; minimum sustained run = 3 ledgers; 200 nodes, 300 Monte-Carlo trials per policy per suppression model; graph seed 0, propagation seed 1; bandwidth proxy = relay (send) events per message.</p>
+</article>
+
+<div class="pagefoot">
+  XBOSM / XMRS — overlay routing research · <a href="mailto:mauraclark@proton.me">mauraclark@proton.me</a><br>
+  Working draft. Figures and exact relay counts marked "pending final data" are filled from analysis artifacts before final circulation.
+</div>
+
+</body>
+</html>
