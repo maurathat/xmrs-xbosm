@@ -1,0 +1,55 @@
+{
+  "n_seeds": 50,
+  "ratios": {
+    "selective_k8 (8+0)": {
+      "latency_slots": 8,
+      "helm_slots": 0,
+      "reach_mean": 0.99975,
+      "reach_min": 0.99375,
+      "reach_std": 0.001225,
+      "t95_mean": 3.394054,
+      "t95_std": 0.485721,
+      "sends_mean": 1277.6
+    },
+    "guarded 7+1": {
+      "latency_slots": 7,
+      "helm_slots": 1,
+      "reach_mean": 0.999875,
+      "reach_min": 0.99375,
+      "reach_std": 0.000875,
+      "t95_mean": 3.440902,
+      "t95_std": 0.492734,
+      "sends_mean": 1277.7
+    },
+    "adaptive_weighted (6+2)": {
+      "latency_slots": 6,
+      "helm_slots": 2,
+      "reach_mean": 0.999375,
+      "reach_min": 0.99375,
+      "reach_std": 0.001875,
+      "t95_mean": 3.504436,
+      "t95_std": 0.536815,
+      "sends_mean": 1277.1
+    },
+    "guarded 5+3": {
+      "latency_slots": 5,
+      "helm_slots": 3,
+      "reach_mean": 0.997375,
+      "reach_min": 0.98125,
+      "reach_std": 0.004163,
+      "t95_mean": 3.591069,
+      "t95_std": 0.537008,
+      "sends_mean": 1274.6
+    },
+    "guarded 4+4": {
+      "latency_slots": 4,
+      "helm_slots": 4,
+      "reach_mean": 0.995,
+      "reach_min": 0.96875,
+      "reach_std": 0.007181,
+      "t95_mean": 3.86132,
+      "t95_std": 0.669344,
+      "sends_mean": 1271.6
+    }
+  }
+}

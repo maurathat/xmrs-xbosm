@@ -101,6 +101,7 @@ def propagate_from_source(
     network_load_index: float = 0.0,
     queueing_load_scale_s: float = 0.0,
     queueing_fanout_exponent: float = 1.0,
+    latency_guard_slots: int | None = None,
 ) -> tuple[np.ndarray, int]:
     """Run propagation; return arrival times (inf = never) and total send count.
 
@@ -208,13 +209,13 @@ def propagate_from_source(
             targets = selected
 
         elif policy == "adaptive_weighted_guarded":
-            # Guarded variant: 4 peers by latency (reachability guard),
-            # 4 peers by HELM-weighted scoring (performance optimization).
-            # The latency half guarantees shortest-path reachability;
-            # the weighted half optimizes for load/stability.
+            # Guarded variant: latency_guard_slots peers by latency
+            # (reachability guard), remainder by HELM-weighted scoring
+            # (performance optimization). Default 4+4 if not specified.
             k = min(selective_k, len(neighbors))
-            latency_guard = k // 2          # 4 of 8 reserved for reachability
-            weighted_slots = k - latency_guard  # 4 of 8 for HELM scoring
+            latency_guard = latency_guard_slots if latency_guard_slots is not None else k // 2
+            latency_guard = max(1, min(latency_guard, k))
+            weighted_slots = k - latency_guard
 
             max_latency = max((edge[1] for edge in neighbors), default=1.0)
 
