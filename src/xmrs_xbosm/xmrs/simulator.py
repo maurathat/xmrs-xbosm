@@ -22,7 +22,7 @@ from xmrs_xbosm.common.config import load_yaml
 from xmrs_xbosm.common.io import append_jsonl
 from xmrs_xbosm.common.models import TelemetryEvent, utc_now_iso
 
-PolicyName = Literal["flood", "selective", "adaptive_weighted"]
+PolicyName = Literal["flood", "selective", "adaptive_weighted", "adaptive_weighted_guarded"]
 
 # Default selective fan-outs when ``selective_ks`` is omitted from config.
 DEFAULT_SELECTIVE_KS: tuple[int, ...] = (6, 8, 10)
@@ -207,6 +207,43 @@ def propagate_from_source(
             selected.extend(weighted_candidates[:weighted_quota])
             targets = selected
 
+        elif policy == "adaptive_weighted_guarded":
+            # Guarded variant: 4 peers by latency (reachability guard),
+            # 4 peers by HELM-weighted scoring (performance optimization).
+            # The latency half guarantees shortest-path reachability;
+            # the weighted half optimizes for load/stability.
+            k = min(selective_k, len(neighbors))
+            latency_guard = k // 2          # 4 of 8 reserved for reachability
+            weighted_slots = k - latency_guard  # 4 of 8 for HELM scoring
+
+            max_latency = max((edge[1] for edge in neighbors), default=1.0)
+
+            def guarded_score(edge):
+                neighbor, latency = edge
+                normalized_latency = latency / max(max_latency, 0.001)
+                normalized_load = ((neighbor * 17) % 100) / 100
+                normalized_instability = ((neighbor * 31) % 100) / 100
+                return (
+                    1.0 * normalized_latency
+                    + 0.5 * normalized_load
+                    + 2.0 * normalized_instability
+                )
+
+            # Guard half: pure latency selection (preserves reachability)
+            latency_sorted = sorted(neighbors, key=lambda e: e[1])
+            latency_targets = latency_sorted[:latency_guard]
+            selected = list(latency_targets)
+            selected_nodes = {edge[0] for edge in selected}
+
+            # Weighted half: HELM-scored from remaining candidates
+            weighted_candidates = [
+                edge
+                for edge in sorted(neighbors, key=guarded_score)
+                if edge[0] not in selected_nodes
+            ]
+            selected.extend(weighted_candidates[:weighted_slots])
+            targets = selected
+
         else:
             k = min(selective_k, len(neighbors))
             targets = sorted(neighbors, key=lambda e: e[1])[:k]
@@ -288,7 +325,7 @@ def simulate_policies_dataframe(
     queueing_load_scale_s: float = 0.0,
     queueing_fanout_exponent: float = 1.0,
 ) -> pd.DataFrame:
-    """One row per policy variant: ``flood``, ``adaptive_weighted_k8``, then ``selective_k{K}`` for each *K*."""
+    """One row per policy variant: ``flood``, ``adaptive_weighted_k8``, ``adaptive_weighted_k8_guarded``, then ``selective_k{K}`` for each *K*."""
     rows: list[dict[str, Any]] = []
     load_meta = (
         float(network_load_index)
@@ -349,6 +386,35 @@ def simulate_policies_dataframe(
     rows.append(
         {
             "policy": f"adaptive_weighted_k{adaptive_k}",
+            "t95_propagation_s": _t95_seconds(dist),
+            "num_sends": int(sends),
+            "estimated_bandwidth_bps": _bandwidth_bps(
+                sends, message_size_bytes, span
+            ),
+            "reachability": _reachability(dist),
+            "network_load_index": load_meta,
+            "send_spacing_s": float(send_spacing_s),
+            "queueing_load_scale_s": float(queueing_load_scale_s),
+            "queueing_fanout_exponent": float(queueing_fanout_exponent),
+        }
+    )
+
+    # Guarded variant: 4 latency + 4 HELM-weighted
+    dist, sends = propagate_from_source(
+        graph,
+        source,
+        "adaptive_weighted_guarded",
+        selective_k=adaptive_k,
+        send_spacing_s=send_spacing_s,
+        network_load_index=load_prop,
+        queueing_load_scale_s=queueing_load_scale_s,
+        queueing_fanout_exponent=queueing_fanout_exponent,
+    )
+    finite = dist[np.isfinite(dist) & (dist < np.inf)]
+    span = float(finite.max()) if finite.size else float("nan")
+    rows.append(
+        {
+            "policy": f"adaptive_weighted_k{adaptive_k}_guarded",
             "t95_propagation_s": _t95_seconds(dist),
             "num_sends": int(sends),
             "estimated_bandwidth_bps": _bandwidth_bps(
